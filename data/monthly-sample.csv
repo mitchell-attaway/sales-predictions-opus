@@ -1,0 +1,33 @@
+1st of MONTH | 30/60 Day Close Prediction,,,,,,,,,,,,,,,,,,,,,,
+,Deal,Deal Value,One Time,Onboarding,Ongoing,Owner,MD,Pipeline,State,Stage,Exp 30/60,Exp Close Date,Exp Start Date,Chance of Close,Chance 30-day closing / 60 Days,Close?,Chance of Close (30),Chance of Close (60),30 Day Deals,60 Day Deals,30 Day Deal Value,60 day Deal Value
+1,Seydel,"$225,000.00","$75,000.00","$18,000.00","$132,000.00",Troy Williams,Stephen Mitchell,Cold,Pennsylvania,Negotiation,30 Days,Feb,Mar,10%,5%,Open,10%,5%,Seydel,Seydel,"$22,500.00","$11,250.00"
+2,Michael's Homes,"$249,000.00","$85,000.00","$20,000.00","$144,000.00",Troy Williams,Stephen Mitchell,Cold,Tennessee,Brand Alignment,30 Days,Feb,,25%,10%,Open,25%,10%,Michael's Homes,Michael's Homes,"$62,250.00","$24,900.00"
+3,Atlas Roofing,"$150,000.00","$50,000.00","$12,000.00","$88,000.00",Elijah Lee,Jordan Parker,Warm,Georgia,Proposal Sent,30 Days,Feb,Mar,45%,30%,Open,45%,30%,Atlas Roofing,Atlas Roofing,"$67,500.00","$45,000.00"
+4,Greenfield Solar,"$180,000.00","$60,000.00","$15,000.00","$105,000.00",Elijah Lee,Jordan Parker,Hot,California,Agreement Presented,30 Days,Feb,Mar,75%,60%,Open,75%,60%,Greenfield Solar,Greenfield Solar,"$135,000.00","$108,000.00"
+5,Pinnacle Builders,"$320,000.00","$110,000.00","$25,000.00","$185,000.00",Troy Williams,Stephen Mitchell,Warm,Texas,Discovery,60 Days,Mar,Apr,20%,15%,Open,20%,15%,FALSE,Pinnacle Builders,"$0.00","$48,000.00"
+6,Summit Properties,"$95,000.00","$30,000.00","$8,000.00","$57,000.00",Elijah Lee,Jordan Parker,Cold,Florida,Initial Contact,30 Days,Feb,,5%,3%,Open,5%,3%,Summit Properties,Summit Properties,"$4,750.00","$2,850.00"
+7,Coastal Living,"$275,000.00","$90,000.00","$22,000.00","$163,000.00",Troy Williams,Jordan Parker,Warm,North Carolina,Negotiation,30 Days,Feb,Mar,55%,40%,Open,55%,40%,Coastal Living,Coastal Living,"$151,250.00","$110,000.00"
+8,Horizon HVAC,"$130,000.00","$45,000.00","$10,000.00","$75,000.00",Elijah Lee,Stephen Mitchell,Hot,Ohio,Proposal Sent,30 Days,Feb,Mar,65%,50%,Open,65%,50%,Horizon HVAC,Horizon HVAC,"$84,500.00","$65,000.00"
+9,Evergreen Plumbing,"$88,000.00","$28,000.00","$7,000.00","$53,000.00",Troy Williams,Stephen Mitchell,Cold,Virginia,Brand Alignment,60 Days,Mar,Apr,15%,10%,Open,15%,10%,FALSE,Evergreen Plumbing,"$0.00","$8,800.00"
+10,Urban Remodel Co,"$205,000.00","$70,000.00","$17,000.00","$118,000.00",Elijah Lee,Jordan Parker,Warm,New York,Discovery,30 Days,Feb,Mar,35%,25%,Open,35%,25%,Urban Remodel Co,Urban Remodel Co,"$71,750.00","$51,250.00"
+,,,,,,,,,,,,,,,,,,,,,,
+30 Day Prediction Summary,,,,,,,,,,,,,,,,,,,,,,
+Number of Close:,3.55,,,,,,,,,,,,,,,,,,,,
+Dollar:,"$599,500.00",,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,
+60 Day Prediction Summary,,,,,,,,,,,,,,,,,,,,,,
+Number of Close:,2.48,,,,,,,,,,,,,,,,,,,,
+Dollar:,"$475,050.00",,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,
+15th of MONTH | 30/60 Day Close Prediction,,,,,,,,,,,,,,,,,,,,,,
+,Deal,Deal Value,One Time,Onboarding,Ongoing,Owner,MD,Pipeline,State,Stage,Exp 30/60,Exp Close Date,Exp Start Date,Chance of Close,Chance 30-day closing / 60 Days,Close?,Chance of Close (30),Chance of Close (60),30 Day Deals,60 Day Deals,30 Day Deal Value,60 day Deal Value
+FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
+,,,,,,,,,,,,,,,,,,,,,,
+End of MONTH | 30 Actuals,,,,,,,,,,,,,,,,,,,,,,
+,Deal,Deal Value,One Time,Onboarding,Ongoing,Owner,MD,Pipeline,State,Stage,Exp 30/60,Exp Close Date,Exp Start Date,Chance of Close,Chance 30-day closing / 60 Days,Close?,Chance of Close (30),Chance of Close (60),30 Day Deals,60 Day Deals,30 Day Deal Value,60 day Deal Value
+1,Estrada & Sons,"$40,100.00","$12,000.00","$5,000.00","$23,100.00",Elijah Lee,Jordan Parker,Warm,Georgia,Agreement Presented,30 Days,Feb,Mar,100%,100%,Closed,100%,100%,Estrada & Sons,Estrada & Sons,"$40,100.00","$40,100.00"
+2,Greenfield Solar,"$180,000.00","$60,000.00","$15,000.00","$105,000.00",Elijah Lee,Jordan Parker,Hot,California,Agreement Presented,30 Days,Feb,Mar,100%,100%,Closed,100%,100%,Greenfield Solar,Greenfield Solar,"$180,000.00","$180,000.00"
+,,,,,,,,,,,,,,,,,,,,,,
+30 Day Updated Prediction,,,,,,,,,,,,,,,,,,,,,,
+Number of Close:,2,,,,,,,,,,,,,,,,,,,,
+Dollar:,"$220,100.00",,,,,,,,,,,,,,,,,,,,
