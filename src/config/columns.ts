@@ -97,7 +97,7 @@ export const ACTUALS_SYNONYMS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Top Sheet – section label markers (case-insensitive substring match)
+// "2026" yearly tab – section label markers (case-insensitive substring match)
 // ---------------------------------------------------------------------------
 export const TOP_SHEET_MARKERS = {
   modeledRevenue: 'Model Projected Closed Revenue',
@@ -111,7 +111,7 @@ export const TOP_SHEET_MARKERS = {
   actualAvgPartnerCount: 'Actual Average New Monthly Partners',
 };
 
-/** Month short names used as column headers in Top Sheet */
+/** Month short names used as column headers in the yearly tab */
 export const MONTH_SHORT_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',

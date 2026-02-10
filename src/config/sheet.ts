@@ -10,16 +10,16 @@ const SHEET_ID =
   process.env.SALES_PREDICTIONS_SHEET_ID ??
   '2PACX-1vTmXpub-XcClEL87mq-nr1mpCCshRrqj1Xcu_f4eJlPlYQHRiVOW_yF67C3F06vANp97APtcK_5YrRw';
 
-const TOP_SHEET_GID = process.env.TOP_SHEET_GID ?? '867529212';
+const YEARLY_TAB_GID = process.env.TOP_SHEET_GID ?? '162412867';
 
 /** Build a CSV export URL for a given tab gid. */
 export function buildCsvUrl(gid: string): string {
   return `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${gid}&single=true&output=csv`;
 }
 
-/** URL for the Top Sheet tab */
-export function getTopSheetUrl(): string {
-  return buildCsvUrl(TOP_SHEET_GID);
+/** URL for the "2026" yearly summary tab (projected vs actuals). */
+export function getYearlyTabUrl(): string {
+  return buildCsvUrl(YEARLY_TAB_GID);
 }
 
 /** Whether to use local mock data instead of live sheets */

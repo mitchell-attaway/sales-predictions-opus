@@ -1,7 +1,7 @@
 /**
- * Parser for the Top Sheet tab CSV.
+ * Parser for the "2026" yearly tab CSV.
  *
- * The Top Sheet contains multiple sections with months across columns:
+ * The tab contains multiple sections with months across columns:
  *  - Projected Average New Partner Value
  *  - Actual New Partner Value
  *  - Model Projected Closed Revenue (Monthly + Rolling)
@@ -87,21 +87,31 @@ function extractMonthValues(
   return values;
 }
 
-/** Extract a single value near a section marker. */
+/**
+ * Extract a single value near a section marker.
+ * Column-aware: finds which column the marker is in, then looks
+ * in the same column in subsequent rows for the numeric value.
+ * This handles layouts where multiple markers share a row.
+ */
 function extractSingleValue(rows: string[][], marker: string): number {
-  const idx = findSectionRow(rows, marker);
-  if (idx === -1) return 0;
+  const m = marker.toLowerCase();
 
-  // Check the same row and the next row for a numeric value
-  for (let i = idx; i < Math.min(idx + 2, rows.length); i++) {
-    for (const cell of rows[i]) {
-      const trimmed = cell.trim();
-      if (trimmed && trimmed !== marker && !trimmed.toLowerCase().includes(marker.toLowerCase())) {
+  for (let i = 0; i < rows.length; i++) {
+    for (let c = 0; c < rows[i].length; c++) {
+      const cell = rows[i][c].trim().toLowerCase();
+      if (!cell.includes(m)) continue;
+
+      // Found the marker at (i, c). Look in the same column below.
+      for (let r = i + 1; r < Math.min(i + 3, rows.length); r++) {
+        if (c >= rows[r].length) continue;
+        const trimmed = rows[r][c].trim();
+        if (!trimmed) continue;
         const val = parseCurrency(trimmed);
         if (val > 0) return val;
         const pct = parsePercent(trimmed);
         if (pct > 0) return pct;
       }
+      return 0;
     }
   }
   return 0;
@@ -230,51 +240,35 @@ export function parseTopSheetCsv(csvText: string): TopSheetData {
     }
   }
 
-  // --- Extract accuracy ---
+  // --- Extract accuracy (column-aware) ---
+  // Both accuracy labels may share a row, so find the column of each marker
+  // and look in the same column in the next row for the percent value.
   let revenueAccuracy = 0;
   let partnersAccuracy = 0;
 
-  for (let i = rows.length - 10; i < rows.length; i++) {
-    if (i < 0) continue;
+  for (let i = Math.max(0, rows.length - 10); i < rows.length; i++) {
     const joined = rows[i].join(' ').toLowerCase();
-    if (joined.includes('close number') && joined.includes('accuracy')) {
-      // Extract the percentage from this or next row
-      for (const cell of rows[i]) {
-        const pct = parsePercent(cell);
+    if (!joined.includes('accuracy')) continue;
+
+    for (let c = 0; c < rows[i].length; c++) {
+      const cell = rows[i][c].trim().toLowerCase();
+      if (!cell.includes('accuracy')) continue;
+
+      const isPartners = cell.includes('close number');
+      const isRevenue = cell.includes('revenue');
+
+      if (!isPartners && !isRevenue) continue;
+
+      // Look in the same column in the next row for the percent
+      if (i + 1 < rows.length && c < rows[i + 1].length) {
+        const pct = parsePercent(rows[i + 1][c].trim());
         if (pct > 0) {
-          partnersAccuracy = pct;
-          break;
-        }
-      }
-      // Check next row too
-      if (partnersAccuracy === 0 && i + 1 < rows.length) {
-        for (const cell of rows[i + 1]) {
-          const pct = parsePercent(cell);
-          if (pct > 0) {
-            partnersAccuracy = pct;
-            break;
-          }
+          if (isPartners) partnersAccuracy = pct;
+          if (isRevenue) revenueAccuracy = pct;
         }
       }
     }
-    if (joined.includes('revenue') && joined.includes('accuracy')) {
-      for (const cell of rows[i]) {
-        const pct = parsePercent(cell);
-        if (pct > 0) {
-          revenueAccuracy = pct;
-          break;
-        }
-      }
-      if (revenueAccuracy === 0 && i + 1 < rows.length) {
-        for (const cell of rows[i + 1]) {
-          const pct = parsePercent(cell);
-          if (pct > 0) {
-            revenueAccuracy = pct;
-            break;
-          }
-        }
-      }
-    }
+    break; // Only process the first accuracy row
   }
 
   // --- Build month array ---

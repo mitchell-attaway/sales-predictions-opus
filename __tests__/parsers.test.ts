@@ -75,7 +75,7 @@ describe('parseMonthlyCsv', () => {
   });
 });
 
-describe('parseTopSheetCsv', () => {
+describe('parseTopSheetCsv (2026 tab)', () => {
   const result = parseTopSheetCsv(TOPSHEET_CSV);
 
   it('parses 12 months of data', () => {
@@ -87,31 +87,52 @@ describe('parseTopSheetCsv', () => {
     expect(result.months[11].month).toBe('Dec');
   });
 
-  it('parses modeled revenue', () => {
-    expect(result.months[0].modeledRevenue).toBe(350000);
-    expect(result.months[5].modeledRevenue).toBe(350000);
+  it('parses modeled revenue (Jan = $432,450)', () => {
+    expect(result.months[0].modeledRevenue).toBe(432450);  // Jan
+    expect(result.months[3].modeledRevenue).toBe(576600);  // Apr
+    expect(result.months[11].modeledRevenue).toBe(432450); // Dec (prior year)
   });
 
-  it('parses actual revenue', () => {
-    expect(result.months[0].actualRevenue).toBeCloseTo(355140.62, 0);
-    expect(result.months[1].actualRevenue).toBeCloseTo(281460.84, 0);
+  it('parses actual revenue (only Dec and Jan have values)', () => {
+    expect(result.months[11].actualRevenue).toBeCloseTo(1084751.57, 0); // Dec
+    expect(result.months[0].actualRevenue).toBeCloseTo(545932.51, 0);   // Jan
+    expect(result.months[1].actualRevenue).toBe(0); // Feb — empty in CSV
+    expect(result.months[2].actualRevenue).toBe(0); // Mar — empty in CSV
   });
 
   it('parses modeled partners', () => {
-    expect(result.months[0].modeledPartners).toBe(2);
-    expect(result.months[6].modeledPartners).toBe(2.5);
+    expect(result.months[0].modeledPartners).toBe(3);  // Jan
+    expect(result.months[3].modeledPartners).toBe(4);  // Apr
+    expect(result.months[11].modeledPartners).toBe(3); // Dec
   });
 
-  it('parses actual partners', () => {
-    expect(result.months[0].actualPartners).toBe(2);
-    expect(result.months[3].actualPartners).toBe(5);
+  it('parses actual partners (only Dec and Jan have values)', () => {
+    expect(result.months[11].actualPartners).toBe(6); // Dec
+    expect(result.months[0].actualPartners).toBe(4);  // Jan
+    expect(result.months[1].actualPartners).toBe(0);  // Feb — empty
   });
 
-  it('extracts projected avg partner value', () => {
-    expect(result.projectedAvgPartnerValue).toBe(175000);
+  it('extracts projected avg partner value (column-aware)', () => {
+    expect(result.projectedAvgPartnerValue).toBe(144150);
   });
 
-  it('extracts actual avg partner value', () => {
-    expect(result.actualAvgPartnerValue).toBeCloseTo(100881.7, 0);
+  it('extracts projected avg partner count (column-aware)', () => {
+    expect(result.projectedAvgPartnerCount).toBe(3.5);
+  });
+
+  it('extracts actual avg partner value as 0 when empty', () => {
+    expect(result.actualAvgPartnerValue).toBe(0);
+  });
+
+  it('extracts actual avg partner count (column-aware)', () => {
+    expect(result.actualAvgPartnerCount).toBe(2);
+  });
+
+  it('extracts revenue accuracy (column-aware)', () => {
+    expect(result.revenueAccuracy).toBeCloseTo(2.3077, 2);
+  });
+
+  it('extracts partners accuracy as 0 when #DIV/0!', () => {
+    expect(result.partnersAccuracy).toBe(0);
   });
 });

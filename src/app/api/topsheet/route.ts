@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getTopSheetUrl } from '@/config/sheet';
+import { getYearlyTabUrl } from '@/config/sheet';
 import { fetchCsv } from '@/lib/fetcher';
 import { parseTopSheetCsv } from '@/lib/parsers/topsheet';
 import type { TopSheetApiResponse } from '@/types';
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const url = getTopSheetUrl();
+    const url = getYearlyTabUrl();
     const csvText = await fetchCsv(url, 'topsheet-sample.csv');
     const data = parseTopSheetCsv(csvText);
 
