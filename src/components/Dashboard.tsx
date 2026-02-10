@@ -67,7 +67,7 @@ export function Dashboard() {
         {monthly && <KpiCards data={monthly} />}
 
         {/* YTD Plan vs Actual */}
-        {topSheet && <YtdSection data={topSheet} />}
+        {topSheet && <YtdSection data={topSheet} currentMonth={month} />}
 
         {/* Pipeline Charts */}
         {monthly && monthly.pipeline.length > 0 && (

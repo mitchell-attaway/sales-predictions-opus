@@ -12,27 +12,60 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { KpiCard } from './KpiCard';
-import type { TopSheetData, YtdMetrics } from '@/types';
+import type { TopSheetData, TopSheetMonth, YtdMetrics } from '@/types';
 import { fmtCompact, fmtCurrency, fmtPercent, fmtNumber } from '@/lib/format';
 
 interface YtdSectionProps {
   data: TopSheetData;
+  /** Currently selected month in YYYY-MM format (e.g. "2026-02"). */
+  currentMonth: string;
 }
 
-function computeYtd(data: TopSheetData): YtdMetrics {
-  // Sum all months that have actual data (non-zero actual revenue)
+/**
+ * Get the 0-based month index from a YYYY-MM string.
+ * "2026-02" → 1 (February)
+ */
+function monthIndexFromKey(monthKey: string): number {
+  const parts = monthKey.split('-');
+  return parseInt(parts[1], 10) - 1;
+}
+
+/**
+ * Cap actuals at the current month. For any month AFTER currentMonthIdx,
+ * the actual values are zeroed out because those closings haven't happened yet.
+ */
+function capAtCurrentMonth(
+  months: TopSheetMonth[],
+  currentMonthIdx: number
+): TopSheetMonth[] {
+  return months.map((m) => {
+    if (m.monthIndex <= currentMonthIdx) return m;
+    // Future month — keep modeled projections, zero out actuals
+    return {
+      ...m,
+      actualRevenue: 0,
+      actualRevenueRolling: 0,
+      revenueVariance: 0,
+      actualPartners: 0,
+      actualPartnersRolling: 0,
+      partnersVariance: 0,
+    };
+  });
+}
+
+function computeYtd(months: TopSheetMonth[], currentMonthIdx: number): YtdMetrics {
   let ytdModeledRevenue = 0;
   let ytdActualRevenue = 0;
   let ytdModeledPartners = 0;
   let ytdActualPartners = 0;
 
-  for (const m of data.months) {
-    if (m.actualRevenue > 0 || m.modeledRevenue > 0) {
-      ytdModeledRevenue += m.modeledRevenue;
-      ytdActualRevenue += m.actualRevenue;
-      ytdModeledPartners += m.modeledPartners;
-      ytdActualPartners += m.actualPartners;
-    }
+  for (const m of months) {
+    // Only include months up to and including the current month
+    if (m.monthIndex > currentMonthIdx) break;
+    ytdModeledRevenue += m.modeledRevenue;
+    ytdActualRevenue += m.actualRevenue;
+    ytdModeledPartners += m.modeledPartners;
+    ytdActualPartners += m.actualPartners;
   }
 
   const ytdVarianceDollars = ytdActualRevenue - ytdModeledRevenue;
@@ -64,10 +97,23 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   );
 }
 
-export function YtdSection({ data }: YtdSectionProps) {
-  const ytd = useMemo(() => computeYtd(data), [data]);
+export function YtdSection({ data, currentMonth }: YtdSectionProps) {
+  const currentMonthIdx = monthIndexFromKey(currentMonth);
 
-  const revenueChartData = data.months
+  // Cap actuals at the current month — future months show modeled only
+  const cappedMonths = useMemo(
+    () => capAtCurrentMonth(data.months, currentMonthIdx),
+    [data.months, currentMonthIdx]
+  );
+
+  const ytd = useMemo(
+    () => computeYtd(cappedMonths, currentMonthIdx),
+    [cappedMonths, currentMonthIdx]
+  );
+
+  // Revenue chart: show all months that have modeled data,
+  // but actuals are 0 for future months
+  const revenueChartData = cappedMonths
     .filter((m) => m.modeledRevenue > 0 || m.actualRevenue > 0)
     .map((m) => ({
       month: m.month,
@@ -75,7 +121,8 @@ export function YtdSection({ data }: YtdSectionProps) {
       Actual: m.actualRevenue,
     }));
 
-  const partnersChartData = data.months
+  // Partners chart
+  const partnersChartData = cappedMonths
     .filter((m) => m.modeledPartners > 0 || m.actualPartners > 0)
     .map((m) => ({
       month: m.month,
