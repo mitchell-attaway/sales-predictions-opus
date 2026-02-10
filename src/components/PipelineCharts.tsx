@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import type { Prospect } from '@/types';
 import { fmtCompact, fmtCurrency, fmtPercent } from '@/lib/format';
+import { PipelineMap } from './PipelineMap';
 
 interface PipelineChartsProps {
   pipeline: Prospect[];
@@ -73,24 +74,6 @@ export function PipelineCharts({ pipeline }: PipelineChartsProps) {
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [pipeline]);
-
-  const byState = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const p of pipeline) {
-      const state = p.state || 'Unknown';
-      map.set(state, (map.get(state) ?? 0) + p.dealValue);
-    }
-    const sorted = Array.from(map.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-
-    if (sorted.length > 10) {
-      const top10 = sorted.slice(0, 10);
-      const otherValue = sorted.slice(10).reduce((s, x) => s + x.value, 0);
-      return [...top10, { name: 'Other', value: otherValue }];
-    }
-    return sorted;
   }, [pipeline]);
 
   const scatterData = useMemo(() => {
@@ -151,26 +134,6 @@ export function PipelineCharts({ pipeline }: PipelineChartsProps) {
           </ResponsiveContainer>
         </div>
 
-        {/* By State */}
-        <div className="rounded-xl border p-4" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Pipeline by State (Top 10)
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={byState}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-              <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} angle={-30} textAnchor="end" height={60} />
-              <YAxis tickFormatter={(v: number) => fmtCompact(v)} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                {byState.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
         {/* Scatter: Deal Value vs Close % */}
         {scatterData.length > 0 && (
           <div className="rounded-xl border p-4" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
@@ -201,6 +164,11 @@ export function PipelineCharts({ pipeline }: PipelineChartsProps) {
             </ResponsiveContainer>
           </div>
         )}
+      </div>
+
+      {/* US Map: Pipeline by State */}
+      <div className="mt-4">
+        <PipelineMap pipeline={pipeline} />
       </div>
     </section>
   );
