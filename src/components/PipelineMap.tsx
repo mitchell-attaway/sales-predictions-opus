@@ -1,13 +1,36 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { feature } from 'topojson-client';
+import type { Topology, GeometryCollection } from 'topojson-specification';
+import type { FeatureCollection, Feature, Geometry } from 'geojson';
 import type { Prospect } from '@/types';
 import { fmtCurrency, fmtCompact } from '@/lib/format';
 
-const GEO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
+/**
+ * Pre-projected Albers USA TopoJSON from us-atlas.
+ * Coordinates are already in screen space (~960x600), so no d3-geo needed.
+ */
+const TOPO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-albers-10m.json';
 
-/** Map full state names to two-letter abbreviations and vice versa */
+/** FIPS code → state name mapping (US Census standard) */
+const FIPS_TO_NAME: Record<string, string> = {
+  '01': 'Alabama', '02': 'Alaska', '04': 'Arizona', '05': 'Arkansas',
+  '06': 'California', '08': 'Colorado', '09': 'Connecticut', '10': 'Delaware',
+  '11': 'District of Columbia', '12': 'Florida', '13': 'Georgia', '15': 'Hawaii',
+  '16': 'Idaho', '17': 'Illinois', '18': 'Indiana', '19': 'Iowa',
+  '20': 'Kansas', '21': 'Kentucky', '22': 'Louisiana', '23': 'Maine',
+  '24': 'Maryland', '25': 'Massachusetts', '26': 'Michigan', '27': 'Minnesota',
+  '28': 'Mississippi', '29': 'Missouri', '30': 'Montana', '31': 'Nebraska',
+  '32': 'Nevada', '33': 'New Hampshire', '34': 'New Jersey', '35': 'New Mexico',
+  '36': 'New York', '37': 'North Carolina', '38': 'North Dakota', '39': 'Ohio',
+  '40': 'Oklahoma', '41': 'Oregon', '42': 'Pennsylvania', '44': 'Rhode Island',
+  '45': 'South Carolina', '46': 'South Dakota', '47': 'Tennessee', '48': 'Texas',
+  '49': 'Utah', '50': 'Vermont', '51': 'Virginia', '53': 'Washington',
+  '54': 'West Virginia', '55': 'Wisconsin', '56': 'Wyoming',
+};
+
+/** Full state name → two-letter abbreviation */
 const STATE_NAME_MAP: Record<string, string> = {
   Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA',
   Colorado: 'CO', Connecticut: 'CT', Delaware: 'DE', Florida: 'FL', Georgia: 'GA',
@@ -28,41 +51,33 @@ for (const [name, abbrev] of Object.entries(STATE_NAME_MAP)) {
   ABBREV_TO_NAME[abbrev] = name;
 }
 
-/** Normalise a state string to a canonical full name for matching */
+/** Normalise a state string from CSV data to a canonical full name. */
 function normalizeStateName(input: string): string {
   const trimmed = input.trim();
-  // If it's a 2-letter abbreviation, convert to full name
   if (trimmed.length === 2 && ABBREV_TO_NAME[trimmed.toUpperCase()]) {
     return ABBREV_TO_NAME[trimmed.toUpperCase()];
   }
-  // Title-case match
   const titleCase = trimmed
     .split(' ')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(' ');
-  if (STATE_NAME_MAP[titleCase]) {
-    return titleCase;
-  }
-  // Case-insensitive lookup
+  if (STATE_NAME_MAP[titleCase]) return titleCase;
   for (const name of Object.keys(STATE_NAME_MAP)) {
     if (name.toLowerCase() === trimmed.toLowerCase()) return name;
   }
   return trimmed;
 }
 
-/** Color scale from light to brand-red based on value intensity */
+/** Color scale from neutral to brand-red based on value intensity. */
 function getStateColor(value: number, maxValue: number, isDark: boolean): string {
   if (value === 0) return isDark ? '#0f3a4f' : '#f3f4f6';
   const intensity = Math.min(value / maxValue, 1);
-  // Interpolate from light tint to full brand-red
   if (isDark) {
-    // Dark mode: from navy-lighter to brand-red
     const r = Math.round(15 + (255 - 15) * intensity);
     const g = Math.round(58 + (30 - 58) * intensity);
     const b = Math.round(79 + (0 - 79) * intensity);
     return `rgb(${r}, ${g}, ${b})`;
   } else {
-    // Light mode: from light gray to brand-red
     const r = Math.round(243 + (255 - 243) * intensity);
     const g = Math.round(244 - 244 * intensity * 0.87);
     const b = Math.round(246 - 246 * intensity * 1.0);
@@ -70,18 +85,83 @@ function getStateColor(value: number, maxValue: number, isDark: boolean): string
   }
 }
 
+// ---------------------------------------------------------------------------
+// SVG path rendering from pre-projected GeoJSON coordinates
+// ---------------------------------------------------------------------------
+
+type Coords = number[];
+type Ring = Coords[];
+type PolygonCoords = Ring[];
+type MultiPolygonCoords = PolygonCoords[];
+
+function ringToPath(ring: Ring): string {
+  return ring.map((pt, i) => `${i === 0 ? 'M' : 'L'}${pt[0]},${pt[1]}`).join('') + 'Z';
+}
+
+function geometryToPath(geometry: Geometry): string {
+  if (geometry.type === 'Polygon') {
+    return (geometry.coordinates as PolygonCoords).map(ringToPath).join('');
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return (geometry.coordinates as MultiPolygonCoords)
+      .flatMap((polygon) => polygon.map(ringToPath))
+      .join('');
+  }
+  return '';
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+interface StateFeature {
+  id: string;
+  name: string;
+  path: string;
+}
+
 interface PipelineMapProps {
   pipeline: Prospect[];
 }
 
 export function PipelineMap({ pipeline }: PipelineMapProps) {
+  const [features, setFeatures] = useState<StateFeature[]>([]);
   const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [loadError, setLoadError] = useState(false);
 
-  // Detect dark mode via CSS custom property
-  const isDark = typeof window !== 'undefined'
-    ? document.documentElement.classList.contains('dark')
-    : false;
+  const isDark =
+    typeof window !== 'undefined'
+      ? document.documentElement.classList.contains('dark')
+      : false;
+
+  // Fetch and parse TopoJSON once
+  useEffect(() => {
+    let cancelled = false;
+    fetch(TOPO_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        return res.json();
+      })
+      .then((topology: Topology) => {
+        if (cancelled) return;
+        const geom = topology.objects.states as GeometryCollection;
+        const fc = feature(topology, geom) as FeatureCollection;
+        const parsed: StateFeature[] = fc.features
+          .map((f: Feature) => {
+            const id = String(f.id ?? '').padStart(2, '0');
+            const name = FIPS_TO_NAME[id] ?? `State ${id}`;
+            const path = geometryToPath(f.geometry);
+            return { id, name, path };
+          })
+          .filter((s) => s.path.length > 0);
+        setFeatures(parsed);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const stateData = useMemo(() => {
     const map = new Map<string, { value: number; deals: number }>();
@@ -113,6 +193,21 @@ export function PipelineMap({ pipeline }: PipelineMapProps) {
 
   const hoveredData = hoveredState ? stateData.get(hoveredState) : null;
 
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltipPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, []);
+
+  if (loadError) {
+    return (
+      <div className="rounded-xl border p-6 text-center" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          Unable to load map data. Check your network connection.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl border p-4" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
       <div className="flex items-center justify-between mb-2">
@@ -124,70 +219,54 @@ export function PipelineMap({ pipeline }: PipelineMapProps) {
         </span>
       </div>
 
-      <div
-        className="relative"
-        onMouseMove={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          setTooltipPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-        }}
-      >
-        <ComposableMap
-          projection="geoAlbersUsa"
-          projectionConfig={{ scale: 900 }}
-          width={780}
-          height={500}
-          style={{ width: '100%', height: 'auto' }}
-        >
-          <Geographies geography={GEO_URL}>
-            {({ geographies }) =>
-              geographies.map((geo) => {
-                const stateName = geo.properties.name as string;
-                const data = stateData.get(stateName);
-                const value = data?.value ?? 0;
-                const fillColor = getStateColor(value, maxValue, isDark);
+      <div className="relative" onMouseMove={handleMouseMove}>
+        {features.length === 0 ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-red border-t-transparent" />
+          </div>
+        ) : (
+          <svg
+            viewBox="0 0 960 600"
+            className="w-full h-auto"
+            role="img"
+            aria-label="Pipeline by state map"
+          >
+            {features.map((sf) => {
+              const data = stateData.get(sf.name);
+              const value = data?.value ?? 0;
+              const fillColor =
+                hoveredState === sf.name
+                  ? value > 0
+                    ? '#ff1e00'
+                    : isDark
+                      ? '#1a4a5e'
+                      : '#e5e7eb'
+                  : getStateColor(value, maxValue, isDark);
 
-                return (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    onMouseEnter={() => setHoveredState(stateName)}
-                    onMouseLeave={() => setHoveredState(null)}
-                    style={{
-                      default: {
-                        fill: fillColor,
-                        stroke: isDark ? '#03293a' : '#ffffff',
-                        strokeWidth: 0.75,
-                        outline: 'none',
-                        transition: 'fill 0.2s ease',
-                      },
-                      hover: {
-                        fill: value > 0
-                          ? '#ff1e00'
-                          : isDark ? '#1a4a5e' : '#e5e7eb',
-                        stroke: isDark ? '#03293a' : '#ffffff',
-                        strokeWidth: 1.2,
-                        outline: 'none',
-                        cursor: value > 0 ? 'pointer' : 'default',
-                      },
-                      pressed: {
-                        fill: '#ac1500',
-                        outline: 'none',
-                      },
-                    }}
-                  />
-                );
-              })
-            }
-          </Geographies>
-        </ComposableMap>
+              return (
+                <path
+                  key={sf.id}
+                  d={sf.path}
+                  fill={fillColor}
+                  stroke={isDark ? '#03293a' : '#ffffff'}
+                  strokeWidth={hoveredState === sf.name ? 1.5 : 0.75}
+                  style={{ transition: 'fill 0.15s ease, stroke-width 0.15s ease' }}
+                  onMouseEnter={() => setHoveredState(sf.name)}
+                  onMouseLeave={() => setHoveredState(null)}
+                  cursor={value > 0 ? 'pointer' : 'default'}
+                />
+              );
+            })}
+          </svg>
+        )}
 
         {/* Tooltip */}
         {hoveredState && (
           <div
-            className="absolute z-10 pointer-events-none rounded-lg border px-3 py-2 shadow-lg text-xs"
+            className="absolute z-10 pointer-events-none rounded-lg border px-3 py-2 shadow-lg text-xs whitespace-nowrap"
             style={{
-              left: Math.min(tooltipPos.x + 12, 280),
-              top: tooltipPos.y - 50,
+              left: Math.min(tooltipPos.x + 14, (typeof window !== 'undefined' ? window.innerWidth * 0.6 : 400)),
+              top: Math.max(tooltipPos.y - 56, 0),
               backgroundColor: 'var(--bg-card)',
               borderColor: 'var(--border-color)',
             }}
