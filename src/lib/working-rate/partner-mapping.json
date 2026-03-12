@@ -1,0 +1,5 @@
+{
+  "_comment": "Manual mapping from Airtable partner names to Harvest client names. Add entries as needed for partners that don't auto-match.",
+  "Flat Creek Baptist": "Flat Creek Baptist Church",
+  "GDP Group": "GDP"
+}
